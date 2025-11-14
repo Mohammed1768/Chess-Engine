@@ -56,7 +56,7 @@ class Game:
     
 
     def move(self, move: chess.Move):
-        print(f"{"White: "if self.board.turn==chess.WHITE else "Black: "}", move)
+        # print(f"{"White: "if self.board.turn==chess.WHITE else "Black: "}", move)
         self.board.push(move)
     
 
