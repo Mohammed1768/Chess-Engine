@@ -14,7 +14,7 @@ x_train = torch.tensor(x_train, dtype=torch.float32)
 y_train = torch.tensor(y_train, dtype=torch.float32).unsqueeze(-1)
 
 train_dataset = TensorDataset(x_train, y_train)
-train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+train_loader = DataLoader(train_dataset, batch_size=1024, shuffle=True)
 
 model = ChessNet()
 algo = nn.MSELoss()
@@ -56,5 +56,6 @@ for epoch in range(epochs):
     print(
         f"Epoch {epoch+1}/{epochs} | "
         f"MSE: {avg_loss:.6f} | "
-        f"CP RMSE: {norm_loss / 1000.0:.2f}"
+        f"CP RMSE: {norm_loss / 100.0:.2f}"
     )
+torch.save(model.state_dict(), "chessnet_weights.pth")
