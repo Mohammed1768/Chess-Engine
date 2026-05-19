@@ -1,19 +1,20 @@
-import pandas as pd
 import torch
+import os
 from torch.utils.data import DataLoader
-from torch.optim.sgd import SGD
-from ChessNet import ChessNet
 from torch.nn import MSELoss
+from ChessNet import ChessNet
 from ChessDataset import ChessDataset
 
 # ----------------------------
 # Load & Preprocess Data
 # ----------------------------
-df = pd.read_csv('dataset\\smaller_train.csv', usecols=['FEN', 'eval'])
+base_dir = os.path.dirname(os.path.abspath(__file__))
 
-
-train_dataset = ChessDataset(df)
-train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
+train_dataset = ChessDataset(
+    os.path.join(base_dir, "..", "dataset", "train_tensors.npy"),
+    os.path.join(base_dir, "..", "dataset", "train_labels.npy"),
+)
+train_loader = DataLoader(train_dataset, batch_size=1024, shuffle=True, num_workers=4, pin_memory=True)
 
 # ----------------------------
 # Model, Optimizer, Loss
@@ -30,7 +31,7 @@ for epoch in range(epochs):
     total_loss = 0.0
     net.train()
     for step, (boards, evals) in enumerate(train_loader, start=1):
-        pred = net(boards).squeeze()
+        pred = net(boards)
         loss = loss_fn(pred, evals)
 
         optimizer.zero_grad()
@@ -38,7 +39,7 @@ for epoch in range(epochs):
         optimizer.step()
 
         total_loss += loss.item()
-        print(f"\rstep {step}/{len(train_loader)} | Loss: {loss:.3f} | Pred: {pred[0]:3f} | Actual: {evals[0]:3f}", end=' ')
+        print(f"\rstep {step}/{len(train_loader)} | Loss: {loss.item():.3f} | Pred: {pred[0].item():3f} | Actual: {evals[0].item():3f}", end=' ')
 
     avg_loss = total_loss / len(train_loader)
     print(f"\nEpoch {epoch+1}/{epochs} | Average Loss: {avg_loss:.6f}")

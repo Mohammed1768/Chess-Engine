@@ -1,16 +1,19 @@
 import torch
 from torch.utils.data import Dataset
-from pandas import DataFrame
-from Encoder import Encoder
+import numpy as np
 
 class ChessDataset(Dataset):
-    def __init__(self, dataset: DataFrame):
-        encoder = Encoder()
-        self.x = [torch.tensor(encoder.encode_FEN(fen), dtype=torch.float32) for fen in dataset['FEN'].values]
-        self.y = torch.tensor(dataset['eval'].values, dtype=torch.float32)
+    def __init__(self, tensors_path: str, labels_path: str):
+        self.x = np.load(tensors_path, mmap_mode='r')
+        self.y = np.load(labels_path, mmap_mode='r')
 
     def __len__(self):
         return len(self.x)
 
     def __getitem__(self, i):        
-        return self.x[i], self.y[i]
+        x_numpy_int8 = self.x[i]
+        
+        x_tensor = torch.from_numpy(x_numpy_int8).float()
+        y_tensor = torch.tensor(self.y[i], dtype=torch.float32).unsqueeze(-1)
+        
+        return x_tensor, y_tensor
