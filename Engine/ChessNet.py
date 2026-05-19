@@ -11,10 +11,9 @@ class ResidualBlock(nn.Module):
         self.bn2 = nn.BatchNorm2d(num_channels)
 
     def forward(self, x):
-        residual = x
         _x = F.relu(self.bn1(self.conv1(x)))
         _x = self.bn2(self.conv2(_x))
-        _x += residual
+        _x += x
         return F.relu(_x)
 
 class ChessNet(nn.Module):

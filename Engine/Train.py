@@ -1,51 +1,60 @@
 import torch
-import os
-from torch.utils.data import DataLoader
-from torch.nn import MSELoss
+import numpy as np
+from pathlib import Path
+from torch.utils.data import TensorDataset, DataLoader
+from sklearn.model_selection import train_test_split
 from ChessNet import ChessNet
-from ChessDataset import ChessDataset
+import torch.nn as nn
 
-# ----------------------------
-# Load & Preprocess Data
-# ----------------------------
-base_dir = os.path.dirname(os.path.abspath(__file__))
+base_dir = Path(__file__).resolve().parent
+training_data = np.load(base_dir.parent / "dataset" / "train.npz")
+x_train, y_train = training_data["x"], training_data["y"]
 
-train_dataset = ChessDataset(
-    os.path.join(base_dir, "..", "dataset", "train_tensors.npy"),
-    os.path.join(base_dir, "..", "dataset", "train_labels.npy"),
-)
-train_loader = DataLoader(train_dataset, batch_size=1024, shuffle=True, num_workers=4, pin_memory=True)
+x_train = torch.tensor(x_train, dtype=torch.float32)
+y_train = torch.tensor(y_train, dtype=torch.float32).unsqueeze(-1)
 
-# ----------------------------
-# Model, Optimizer, Loss
-# ----------------------------
-net = ChessNet()
-optimizer = torch.optim.Adam(net.parameters(), lr=5e-4)
-loss_fn = MSELoss()
+train_dataset = TensorDataset(x_train, y_train)
+train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
 
-# ----------------------------
-# Training Loop
-# ----------------------------
-epochs = 30
+model = ChessNet()
+algo = nn.MSELoss()
+optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
+
+epochs = 20
+
 for epoch in range(epochs):
-    total_loss = 0.0
-    net.train()
-    for step, (boards, evals) in enumerate(train_loader, start=1):
-        pred = net(boards)
-        loss = loss_fn(pred, evals)
+    model.train()
 
+    total_loss = 0
+    total_cp_loss = 0
+    total_samples = 0
+
+    for xb, yb in train_loader:
         optimizer.zero_grad()
+
+        pred = model(xb)
+
+        loss = algo(pred, yb)
+
         loss.backward()
         optimizer.step()
 
-        total_loss += loss.item()
-        print(f"\rstep {step}/{len(train_loader)} | Loss: {loss.item():.3f} | Pred: {pred[0].item():3f} | Actual: {evals[0].item():3f}", end=' ')
+        batch_size = xb.size(0)
+        total_loss += loss.item() * batch_size
 
-    avg_loss = total_loss / len(train_loader)
-    print(f"\nEpoch {epoch+1}/{epochs} | Average Loss: {avg_loss:.6f}")
+        pred_cp = 700 * torch.atanh(pred.clamp(-0.999, 0.999))
+        true_cp = 700 * torch.atanh(yb.clamp(-0.999, 0.999))
 
-# ----------------------------
-# Save Model
-# ----------------------------
-torch.save(net.state_dict(), "chessnet_weights.pth")
-print("DONE")
+        norm_loss = ((pred_cp - true_cp) ** 2).mean()
+
+        total_cp_loss += norm_loss.item() * batch_size
+        total_samples += batch_size
+
+    avg_loss = total_loss / total_samples
+    norm_loss = (total_cp_loss / total_samples) ** 0.5
+
+    print(
+        f"Epoch {epoch+1}/{epochs} | "
+        f"MSE: {avg_loss:.6f} | "
+        f"CP RMSE: {norm_loss / 1000.0:.2f}"
+    )
