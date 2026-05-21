@@ -1,12 +1,13 @@
 import chess
 import chess.polyglot
 import torch
+from pathlib import Path
 from Engine.ChessNet import ChessNet
 from dataset.Encoder import Encoder
 
 
 class Board:
-    def __init__(self, model_path="model.pth"):
+    def __init__(self, model_path=Path(__file__).resolve().parents[1] / "chessnet_weights.pth"):
         self.board = chess.Board()
 
         self.device = torch.device("cpu")
