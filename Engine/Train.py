@@ -18,7 +18,6 @@ train_loader = DataLoader(train_dataset, batch_size=256, shuffle=True)
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-print(device)
 
 model = ChessNet().to(device)
 
@@ -56,4 +55,5 @@ for epoch in range(epochs):
         f"Epoch {epoch+1}/{epochs} | "
         f"MSE: {avg_loss:.6f} | "
     )
-torch.save(model.state_dict(), "/content/drive/MyDrive/chessnet_weights.pth")
+    torch.save(model.state_dict(), base_dir.parent / "chessnet_weights.pth")
+print("DONE, Weights saved")
