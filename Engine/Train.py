@@ -7,6 +7,7 @@ from ChessNet import ChessNet
 import torch.nn as nn
 
 base_dir = Path(__file__).resolve().parent
+weights_path = base_dir.parent / "chessnet_weights.pth"
 training_data = np.load(base_dir.parent / "dataset" / "train.npz")
 x_train, y_train = training_data["x"], training_data["y"]
 
@@ -20,6 +21,11 @@ train_loader = DataLoader(train_dataset, batch_size=256, shuffle=True)
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 model = ChessNet().to(device)
+if weights_path.exists():
+    model.load_state_dict(torch.load(weights_path, map_location=device))
+    print(f"Loaded existing weights from {weights_path}")
+else:
+    print("No existing weights found. Starting from scratch.")
 
 algo = nn.MSELoss()
 optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3)
@@ -55,5 +61,5 @@ for epoch in range(epochs):
         f"Epoch {epoch+1}/{epochs} | "
         f"MSE: {avg_loss:.6f} | "
     )
-    torch.save(model.state_dict(), base_dir.parent / "chessnet_weights.pth")
+    torch.save(model.state_dict(), weights_path)
 print("DONE, Weights saved")

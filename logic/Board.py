@@ -17,10 +17,7 @@ class Board:
         model.load_state_dict(torch.load(model_path, map_location=self.device))
         model.eval()
 
-        try:
-            self.model = torch.compile(model)
-        except Exception:
-            self.model = model
+        self.model = model
 
         self.transposition_table = {}
 
